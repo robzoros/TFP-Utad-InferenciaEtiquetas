@@ -1,0 +1,8 @@
+*.pyc
+**/spark-warehouse
+**/target
+**/project
+ClasificacionImagenesNone.py
+ClasificacionImagenesPruebas.py
+**/.idea
+prueba*
