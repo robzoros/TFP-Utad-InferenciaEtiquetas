@@ -4,9 +4,6 @@ import org.apache.spark.ml.feature.StopWordsRemover
 import org.apache.spark.sql.functions.input_file_name
 import org.apache.spark.sql.{SaveMode, SparkSession}
 
-// Definimos clases para los datasets
-case class EtqtasMIRFLICKR(image: String, label_normalized: String)
-case class ScoresInception(image: String, label: String, score: Double)
 
 /**
   * Created by Roberto on 07/06/17.
