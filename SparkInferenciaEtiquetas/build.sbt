@@ -13,6 +13,5 @@ resolvers ++= Seq(
 libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-core" % sparkVersion,
   "org.apache.spark" %% "spark-sql"  % sparkVersion,
-  "org.apache.spark" %% "spark-mllib" % sparkVersion,
-  "org.jibx" % "jibx-tools" % "1.3.1"
+  "org.apache.spark" %% "spark-mllib" % sparkVersion
 )

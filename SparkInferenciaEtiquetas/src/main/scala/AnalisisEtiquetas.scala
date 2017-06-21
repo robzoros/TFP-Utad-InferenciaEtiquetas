@@ -38,14 +38,11 @@ object AnalisisEtiquetas {
     println("Etiquetas MIRFLICKR: " + Calendar.getInstance.getTime.toString )
     val etiquetasMF = spark.read.text("file:/mnt/hgfs/TFM/mirflickr/meta/tags_raw/")
       .select(input_file_name.alias("image"), $"value".alias("label"))
-    val etiquetasRDD = etiquetasMF.rdd.map(row => getNombreImagen(row.getString(0)) + " " + Normalizador.limpiarEntrada(row.getString(1))).cache
+    //val etiquetasRDD = etiquetasMF.rdd.map(row => getNombreImagen(row.getString(0)) + " " + Normalizador.limpiarEntrada(row.getString(1))).cache
+    val etiquetasRDD = etiquetasMF.rdd.map(row => (getNombreImagen(row.getString(0)), row.getString(1))).cache
 
     // Convertimos en Tokens la etiqueta
-    val scriptPath = "/mnt/hgfs/TFM/Tokenizer.py"
-
-    val etiquetasMFDS = etiquetasRDD
-      .pipe(scriptPath)
-      .map(w => (w.split(" ").head, w.split(" ").tail.filter(_.length > 1)))
+    val etiquetasMFDS = etiquetasRDD.map(tupla => (tupla._1, Normalizador.tokenizer(tupla._2) ))
       .toDF("image", "tokens")
 
     val remover = new StopWordsRemover()
@@ -54,9 +51,7 @@ object AnalisisEtiquetas {
 
     val etiquetasDS = remover.transform(etiquetasMFDS)
       .flatMap( row => row.getAs[Seq[String]]("clean_tokens")
-        .flatMap( word => Normalizador.retokenize(Normalizador.normalize(word))
-          .map( token => EtqtasMIRFLICKR(row.getString(0), token))
-        )
+        .map( token => EtqtasMIRFLICKR(row.getString(0), token))
       )
       .as[EtqtasMIRFLICKR]
       .distinct

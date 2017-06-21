@@ -8,3 +8,5 @@ case class ScoresInception(image: String, label: String, score: Double)
 case class EtiquetaOrigen(id: Long, label: String)
 case class EtiquetaOrigenAgr(image: Long, labels: Array[String])
 case class Clasificacion(id: Long, label: Long)
+case class InceptionVector(image: String, labels: Array[Int], scores: Array[Double])
+
