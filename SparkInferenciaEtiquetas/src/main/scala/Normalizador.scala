@@ -69,6 +69,7 @@ trait Normalizador {
         .replaceAll("\\.\\.","")
         .replaceAll("--","-")
         .replaceAll("\\s+", " ")
+        .replaceAll("^bw$", "b&w")
         .trim
         .split(" ")
         .toList

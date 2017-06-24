@@ -162,5 +162,5 @@ print("Procesamos:", datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S'
 spark = SparkSession(sc)
 inception_df = inception_rdd.toDF()
 print("Salvamos:", datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S'))
-inception_df.write.json('hdfs://master.spark.tfm:9000/user/utad/inception/clasification')
+inception_df.write.json('hdfs://master.spark.tfm:9000/user/utad/inception/classification')
 print("Fin:", datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S'))
