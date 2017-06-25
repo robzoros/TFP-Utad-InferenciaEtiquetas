@@ -10,6 +10,9 @@ model_dir = '/home/utad/TFM/model'
 # Simulamos que las imagenes las obtenermos de un servicio web
 IMAGES_INDEX_URL = 'http://host.images.tfm:8000/mirflickr/'
 
+# Directorio de salida
+dir_classification = 'hdfs://master.spark.tfm:9000/user/utad/inception/classification'
+
 # Otros datos
 numero_imagenes_proceso = 25000  # Número total de imágenes a procesar
 lote_size = 200  # Número de imágenes por lote

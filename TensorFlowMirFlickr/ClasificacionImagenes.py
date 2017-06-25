@@ -16,10 +16,22 @@ from NodeLookup import NodeLookup
 from hdfs import Config
 from time import time
 from datetime import datetime
+import sys
+import getopt
+
+# Creamos variables globales necesarias dentro de función
+node_lookup_bc = None
+model_data_bc = None
 
 
 # Obtenemos modelo
 def get_tensorflow_model():
+    """
+    Busca el modelo para descarga en la url de Tensorflow
+    a menos que ya esté bajado de una ejecución previa.
+
+    :return: Mensaje diciendo que se ha recuperado el modelo
+    """
     # Download and extract model tar file
     filename = C.MODEL_URL.split('/')[-1]
     filepath = os.path.join(C.model_dir, filename)
@@ -115,52 +127,85 @@ def serializar_inferencia(tupla):
 def obtener_nombre_imagen(x):
     return C.IMAGES_INDEX_URL + x.split('<')[1].split('>')[1]
 
-# ***************************************************************************
-# Inicio del proceso
-# ***************************************************************************
 
-# Iniciamos SparkContext
-print("Inicio: ", datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S'))
-sc = SparkContext('spark://master.spark.tfm:7077', 'TensorFlow',
-                  pyFiles=['/home/utad/TFM/Fuentes/TensorFlowMirFlickr/Constantes.py',
-                           '/home/utad/TFM/Fuentes/TensorFlowMirFlickr/NodeLookup.py'])
-# sc = SparkContext('local')
-get_tensorflow_model()
+def main(argv):
+    # Validamos entrada
+    try:
+        opts, args = getopt.getopt(argv, "hd:n:l:m:")
+    except getopt.GetoptError:
+        print ('usage: spark-submit \\ \n --master <master> \\ \n <path>/ClasificacionImagenes.py \\')
+        print (' [-d <directorio_salida] [-n <numero_imagenes>] [-l <tamaño_lote] [-m max_etiquetas]')
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            print ('usage: spark-submit \\ \n --master <master> \\ \n <path>/ClasificacionImagenes.py \\')
+            print (' [-d <directorio_salida] [-n <numero_imagenes>] [-l <tamaño_lote] [-m max_etiquetas]')
+            sys.exit()
+        elif opt == "-d":
+            C.dir_classification = arg
+        elif opt == "-n":
+            C.numero_imagenes_proceso = int(arg)
+        elif opt == "-l":
+            C.lote_size = int(arg)
+        elif opt == "-m":
+            C.max_etiquetas = int(arg)
 
-# Cargamos el modelo y lo distribuimos
-model_path = os.path.join(C.model_dir, 'classify_image_graph_def.pb')
-with tf.gfile.FastGFile(model_path, 'rb') as f:
-    model_data = f.read()
-model_data_bc = sc.broadcast(model_data)
+    print("Directorio :             ", C.dir_classification)
+    print("Num Imagenes a procesar: ", C.numero_imagenes_proceso)
+    print("Imagenes por lote:       ", C.lote_size)
+    print("Max etiquetas a guardar: ", C.max_etiquetas)
 
-# Distribuimos node lookup para ser utilizado en los workers
-node_lookup = NodeLookup().node_lookup
-node_lookup_bc = sc.broadcast(node_lookup)
+    # ***************************************************************************
+    # Inicio del proceso
+    # ***************************************************************************
+    global node_lookup_bc
+    global model_data_bc
+    # Iniciamos SparkContext
+    print("Inicio: ", datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S'))
+    sc = SparkContext('spark://master.spark.tfm:7077', 'TensorFlow',
+                      pyFiles=['/home/utad/TFM/Fuentes/TensorFlowMirFlickr/Constantes.py',
+                               '/home/utad/TFM/Fuentes/TensorFlowMirFlickr/NodeLookup.py'])
+    # sc = SparkContext('local')
+    get_tensorflow_model()
 
-# Obtenemos una lista de las imágenes a procesar y las agrupamos en lotes
-servicio_imagenes = None
-try:
-    servicio_imagenes = urllib.urlopen(C.IMAGES_INDEX_URL)
-except Exception as e:
-    print(e)
-    print("Servidor de imágenes no disponible")
-    exit(404)
+    # Cargamos el modelo y lo distribuimos
+    model_path = os.path.join(C.model_dir, 'classify_image_graph_def.pb')
+    with tf.gfile.FastGFile(model_path, 'rb') as f:
+        model_data = f.read()
+    model_data_bc = sc.broadcast(model_data)
 
-imagenes = servicio_imagenes.read().split('<li>')[2:C.numero_imagenes_proceso + 2]
-lote_imagenes = [imagenes[i:i + C.lote_size] for i in range(0, len(imagenes), C.lote_size)]
+    # Distribuimos node lookup para ser utilizado en los workers
+    node_lookup = NodeLookup().node_lookup
+    node_lookup_bc = sc.broadcast(node_lookup)
 
-# Paralelizamos los lotes de imagenes y procesamos
-rdd_imagenes = sc.parallelize(lote_imagenes).map(lambda x: map(obtener_nombre_imagen, x))
-inception_rdd = rdd_imagenes.flatMap(procesar_lote_imagenes)
+    # Obtenemos una lista de las imágenes a procesar y las agrupamos en lotes
+    servicio_imagenes = None
+    try:
+        servicio_imagenes = urllib.urlopen(C.IMAGES_INDEX_URL)
+    except Exception as e:
+        print(e)
+        print("Servidor de imágenes no disponible")
+        exit(404)
 
-# Borramos directorio categorias del hdfs por si existiera
-client = Config().get_client()
-client.delete('inception', recursive=True)
+    imagenes = servicio_imagenes.read().split('<li>')[2:C.numero_imagenes_proceso + 2]
+    lote_imagenes = [imagenes[i:i + C.lote_size] for i in range(0, len(imagenes), C.lote_size)]
 
-# Salvamos los ficheros obtenidos en formato json. Para ello hay que usar un dataframe
-print("Procesamos:", datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S'))
-spark = SparkSession(sc)
-inception_df = inception_rdd.toDF()
-print("Salvamos:", datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S'))
-inception_df.write.json('hdfs://master.spark.tfm:9000/user/utad/inception/classification')
-print("Fin:", datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S'))
+    # Paralelizamos los lotes de imagenes y procesamos
+    rdd_imagenes = sc.parallelize(lote_imagenes).map(lambda x: map(obtener_nombre_imagen, x))
+    inception_rdd = rdd_imagenes.flatMap(procesar_lote_imagenes)
+
+    # Borramos directorio categorias del hdfs por si existiera
+    client = Config().get_client()
+    client.delete('inception', recursive=True)
+
+    # Salvamos los ficheros obtenidos en formato json. Para ello hay que usar un dataframe
+    print("Procesamos:", datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S'))
+    spark = SparkSession(sc)
+    inception_df = inception_rdd.toDF()
+    print("Salvamos:", datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S'))
+    inception_df.write.json(C.dir_classification)
+    print("Fin:", datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S'))
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
