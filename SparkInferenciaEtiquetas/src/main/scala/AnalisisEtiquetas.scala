@@ -39,6 +39,16 @@ object AnalisisEtiquetas {
       .select(input_file_name.alias("image"), $"value".alias("label"))
     val etiquetasRDD = etiquetasMF.rdd.map(row => (getNombreImagenTags(row.getString(0)), row.getString(1))).cache
 
+    // Obtenemos idioma de cada etiqueta según lo identifica langid (https://github.com/saffsd/langid.py)
+    println("Escribimos Estadísticas Idioma MIRFLICKR: " + Calendar.getInstance.getTime.toString )
+    val scriptPath = "/mnt/hgfs/TFM/Language.py"
+
+    etiquetasRDD.map(tupla => tupla._2)
+      .pipe(scriptPath)
+      .toDF("idioma")
+      .groupBy("idioma").count()
+      .coalesce(3).write.mode(SaveMode.Overwrite).csv(directorio + "mirflickr/idiomas")
+
     // Convertimos en Tokens la etiqueta
     val etiquetasMFDS = etiquetasRDD.map(tupla => (tupla._1, Normalizador.tokenizer(tupla._2) ))
       .toDF("image", "tokens")
@@ -60,6 +70,7 @@ object AnalisisEtiquetas {
     // Etiquetas Más comunes: Obtenemos las 50 más comunes después de eliminar tokens no significativos
     // Mostramos y escribimos a disco
     val etqtasAgrMFDS = etiquetasDS.groupBy("label_normalized").count.cache
+
     val etqtasMasComunesMFDS = etqtasAgrMFDS
       .orderBy($"count".desc)
       .limit(100)
@@ -88,7 +99,7 @@ object AnalisisEtiquetas {
     etqtasAgrMFDS.coalesce(6).write.mode(SaveMode.Overwrite).option("delimiter", "~").csv(directorio + "mirflickr/analisis")
 
     // Escribimos a disco las etiquetas originales en formato JSON y agrupadas
-    println("Escribimos Etiquetas MIRFLICKR orginales: " + Calendar.getInstance.getTime.toString )
+    println("Escribimos Etiquetas MIRFLICKR originales: " + Calendar.getInstance.getTime.toString )
     etiquetasRDD.coalesce(6).toDF.write.mode(SaveMode.Overwrite).json(directorio + "mirflickr/original")
 
     // *****************************************
