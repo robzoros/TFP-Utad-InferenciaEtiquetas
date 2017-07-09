@@ -1,10 +1,8 @@
-import java.util.Calendar
-
 import ExtraerNombreFicheros.toLongNombreImagen
 import org.apache.spark.ml.classification.{DecisionTreeClassificationModel, DecisionTreeClassifier}
 import org.apache.spark.ml.feature.CountVectorizer
-import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{SaveMode, SparkSession}
 
 /**
   * Created by utad on 6/17/17.
@@ -26,7 +24,6 @@ object InfFlickrtoInception {
     }
 
     println("Directorio lectura/resultados: " + directorio)
-    println("Inicio Proceso: " + Calendar.getInstance.getTime.toString)
     val spark = SparkSession
       .builder()
       .appName("Inferencia Incepction desde Flickr")
@@ -36,7 +33,6 @@ object InfFlickrtoInception {
 
     // Leemos puntuaciones de inception generadas por proceso lanzado previamente
     // Transformamos tupla de ("im999", "label", 0.6555) a ("999", label)
-    println("Leemos, filtramos y transformamos Etiquetas Inception: " + Calendar.getInstance.getTime.toString)
     val labelInceptionDF = spark.read.json(directorio + "inception/classification/")
       .map(cl => EtiquetaImagen(toLongNombreImagen(cl.getString(0)), cl.getString(1)))
       .groupBy("id")
@@ -44,13 +40,11 @@ object InfFlickrtoInception {
 
 
     // Leemos lista de imagenes de MIRFLICKR y sus etiquetas
-    println("Leemos imagenes-etiquetas de MIRFLICKR: " + Calendar.getInstance.getTime.toString )
     val etiquetasMIRFLICKRDF = spark.read.json(directorio + "mirflickr/labels-images")
-      .groupBy("image")
-      .agg(collect_list("label_normalized") as "labels")
-      .map(r => EtiquetaOrigenAgr(r.getString(0).toLong, r.getSeq(1).toArray))
+      .groupBy("id")
+      .agg(collect_list("label") as "labels")
+      .map(r => EtiquetaOrigenAgr(r.getLong(0), r.getSeq(1).toArray))
 
-    println("Join entre Inception y MIRFLICKR: " + Calendar.getInstance.getTime.toString )
     // Row(id   |label|image|labels )
     val joinDF = labelInceptionDF
       .join(etiquetasMIRFLICKRDF, labelInceptionDF("id") === etiquetasMIRFLICKRDF("image"))
@@ -58,7 +52,6 @@ object InfFlickrtoInception {
     joinDF.show()
 
     // Extraemos características con CountVectorizer (las 10.000 más comunes)
-    println("Extraemos Características: " + Calendar.getInstance.getTime.toString )
     val datos = new CountVectorizer()
       .setInputCol("labels")
       .setOutputCol("features")
@@ -67,7 +60,6 @@ object InfFlickrtoInception {
       .transform(joinDF)
 
     // Dividimos datos para entrenar y probar.
-    println("Dividimos datos para entrenar y probar.: " + Calendar.getInstance.getTime.toString )
     val Array(trainingData, testData) = datos.select("id", "classification", "features").randomSplit(Array(0.8, 0.2))
 
     /**
@@ -77,20 +69,13 @@ object InfFlickrtoInception {
       */
     def entrenarModelo(etiqueta: String) : ( String, DecisionTreeClassificationModel ) = {
 
-      println("\n**************************************************************")
       println(" Entrenamos etiqueta: " + etiqueta)
-      println("**************************************************************\n")
 
       // Añadimos columna con el valor para la etiqueta que vamos a entrenar
       // Pasamos de ("id", "classification", "features") a ("id", "label", "features")
       val trainingDataEtiqueta = trainingData
         .map(r => Clasificacion(r.getLong(0), r.getSeq(1).toArray[String].count(_ == etiqueta), r.getAs("features")))
 
-      println(trainingDataEtiqueta.count)
-      println(trainingDataEtiqueta.filter("label == 1").count)
-      println(trainingDataEtiqueta.filter("label == 0").count)
-
-      println("Entrenamos Modelo: " + Calendar.getInstance.getTime.toString )
       // Entrenamos modelo
       val dtc = new DecisionTreeClassifier()
         .setLabelCol("label")
@@ -106,18 +91,24 @@ object InfFlickrtoInception {
     /*************************************/
 
     // Obtenemos una lista de modelos entrenados para cada etiqueta (etiqueta, modelo)
-    println("Leemos etiquetas y entrenamos: " + Calendar.getInstance.getTime.toString)
-    val listaModelosEntrenados = spark.sparkContext.textFile(directorio + "inception/comunes/").collect.map(entrenarModelo)
+    //val listaModelosEntrenados = spark.sparkContext.textFile(directorio + "inception/comunes/").collect.map(entrenarModelo)
+    val listaModelosEntrenados = spark.sparkContext.textFile(directorio + "inception/comunes/").take(5).map(entrenarModelo)
 
     // Hacemos Predicciones con el set de imágenes del trainData para cada modelo
-    println("Hacemos predicciones: " + Calendar.getInstance.getTime.toString )
-    val predicciones = listaModelosEntrenados
+    val prediccionesDF = listaModelosEntrenados
       .map(modelo => modelo._2.transform(testData).filter("prediction == 1").map(fila => EtiquetaImagen(fila.getLong(0), modelo._1) ))
       .reduce(_.union(_))
 
-    predicciones.show(false)
-    predicciones.coalesce(6).write.mode(SaveMode.Overwrite).json(directorio + "inception/predicciones/")
+    prediccionesDF.show(false)
+    prediccionesDF.coalesce(6).write.mode(SaveMode.Overwrite).json(directorio + "inception/predicciones/")
 
+    // Estadisticas predicciones
+    val prediccionesAgrLabel = prediccionesDF.groupBy("label").agg(collect_list("id") as "images_predicted")
+    val testDataAgrLabel = testData.flatMap(f => f.getSeq[String](1).map(label => (f.getLong(0), label ))).toDF("id", "label").groupBy("label").agg(collect_list("id") as "images")
+
+    prediccionesAgrLabel.join(testDataAgrLabel, "label")
+      .map(fila => EstadisticasPrediciones(fila.getAs[String]("label"), fila.getAs[Seq[Long]]("images").size, fila.getAs[Seq[Long]]("images").filter(fila.getAs[Seq[Long]]("images_predicted") contains).size ))
+      .coalesce(3).write.json(directorio + "inception/estadisticas/")
   }
 
 }

@@ -162,7 +162,7 @@ def main(argv):
     global model_data_bc
     # Iniciamos SparkContext
     print("Inicio: ", datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S'))
-    sc = SparkContext('spark://master.spark.tfm:7077', 'TensorFlow',
+    sc = SparkContext(appName='TensorFlow',
                       pyFiles=['/home/utad/TFM/Fuentes/TensorFlowMirFlickr/Constantes.py',
                                '/home/utad/TFM/Fuentes/TensorFlowMirFlickr/NodeLookup.py'])
     # sc = SparkContext('local')
@@ -195,8 +195,8 @@ def main(argv):
     inception_rdd = rdd_imagenes.flatMap(procesar_lote_imagenes)
 
     # Borramos directorio categorias del hdfs por si existiera
-    client = Config().get_client()
-    client.delete('inception', recursive=True)
+    #client = Config().get_client()
+    #client.delete('inception', recursive=True)
 
     # Salvamos los ficheros obtenidos en formato json. Para ello hay que usar un dataframe
     print("Procesamos:", datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S'))

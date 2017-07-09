@@ -10,9 +10,9 @@ case class EtiquetaImagen(id: Long, label: String)
 case class EtiquetaOrigenAgr(image: Long, labels: Array[String])
 case class Clasificacion(id: Long, label: Long, features: Vector)
 case class InceptionVector(image: String, labels: Array[Int], scores: Array[Double])
+case class EstadisticasPrediciones(label: String, cuenta: Long, aciertos: Long)
 
 // Definimos funciones genéricas
-
 object ExtraerNombreFicheros {
   // Función que extrae el nombre de la imagen de la ruta del fichero
   def getNombreImagenTags(fichero: String): String = fichero.split("/").last.split("\\.").head.split("tags").last

@@ -1,5 +1,3 @@
-import java.util.Calendar
-
 import ExtraerNombreFicheros.toLongNombreImagen
 import org.apache.spark.ml.classification.{DecisionTreeClassificationModel, DecisionTreeClassifier}
 import org.apache.spark.ml.linalg.Vectors
@@ -19,7 +17,6 @@ object InfInceptiontoFlickr {
     }
 
     println("Directorio resultados: " + directorio)
-    println("Inicio Proceso: " + Calendar.getInstance.getTime.toString)
     val spark = SparkSession
       .builder()
       .appName("Modelo Inferencia Etiquetas")
@@ -28,25 +25,21 @@ object InfInceptiontoFlickr {
     import spark.implicits._
 
     // Leemos etiqueta de Flickr
-    println("Leemos y filtramos y transformamos Etiquetas Flickr: " + Calendar.getInstance.getTime.toString)
     val labelFlickrDF = spark.read.json(directorio + "mirflickr/labels-images/")
-      .groupBy("image")
-      .agg(collect_list("label_normalized") as "classification")
+      .groupBy("id")
+      .agg(collect_list("label") as "classification")
 
     // Leemos lista de imagenes de Inception y todas las etiquetas de inception que guardamos en un array
-    println("Leemos imagenes-etiquetas de Inception: " + Calendar.getInstance.getTime.toString )
     val scoresInceptionDS = spark.read.json(directorio + "inception/classification/").as[ScoresInception]
     val labelsInception = scoresInceptionDS.select("label").distinct.sort("label").rdd.map(_.getString(0))collect()
 
     val cuentaEtiquetas = labelsInception.length
-    println("Cuenta Etiquetas: " + cuentaEtiquetas)
 
     // Mandamos a los workers el array y la cuenta de etiquetas
     spark.sparkContext.broadcast(labelsInception)
     spark.sparkContext.broadcast(cuentaEtiquetas)
 
     // Transformamos clasificación de inception en Vector
-    println("Leemos imagenes-etiquetas de Inception: " + Calendar.getInstance.getTime.toString )
     val labelInceptionRDD = scoresInceptionDS.groupBy("image")
       .agg(collect_list("label") as "labels", collect_list("score") as "scores")
       .rdd
@@ -61,16 +54,14 @@ object InfInceptiontoFlickr {
     labelCaracteristicas.show()
 
     // Hacemos join entre los dos DataFrames
-    println("Join entre Inception y MIRFLICKR: " + Calendar.getInstance.getTime.toString )
     // Row(id   |label|image|labels )
     val joinDF = labelFlickrDF
-      .join(labelCaracteristicas, labelFlickrDF("image") === labelCaracteristicas("imagen"))
+      .join(labelCaracteristicas, labelFlickrDF("id") === labelCaracteristicas("imagen"))
 
     joinDF.show()
 
     // Dividimos datos para entrenar y probar.
-    println("Dividimos datos para entrenar y probar.: " + Calendar.getInstance.getTime.toString )
-    val Array(trainingData, testData) = joinDF.select("image", "classification", "features").randomSplit(Array(0.8, 0.2))
+    val Array(trainingData, testData) = joinDF.select("id", "classification", "features").randomSplit(Array(0.8, 0.2))
 
 
     /**
@@ -80,20 +71,12 @@ object InfInceptiontoFlickr {
       */
     def entrenarModelo(etiqueta: String) : ( String, DecisionTreeClassificationModel ) = {
 
-      println("\n**************************************************************")
       println(" Entrenamos etiqueta: " + etiqueta)
-      println("**************************************************************\n")
 
-      // Añadimos columna con el valor para la etiqueta que vamos a entrenar
-      // Pasamos de ("image", "classification", "features") a ("id", "label", "features")
+      // Añadimos columna con el valor para la etiqueta que vamos a entrenar ("id", "label", "features")
       val trainingDataEtiqueta = trainingData
-        .map(r => Clasificacion(r.getString(0).toLong, r.getSeq(1).toArray[String].count(_ == etiqueta), r.getAs("features")))
+        .map(r => Clasificacion(r.getLong(0), r.getSeq(1).toArray[String].count(_ == etiqueta), r.getAs("features")))
 
-      println(trainingDataEtiqueta.count)
-      println(trainingDataEtiqueta.filter("label == 1").count)
-      println(trainingDataEtiqueta.filter("label == 0").count)
-
-      println("Entrenamos Modelo: " + Calendar.getInstance.getTime.toString )
       // Entrenamos modelo
       val dtc = new DecisionTreeClassifier()
         .setLabelCol("label")
@@ -107,17 +90,24 @@ object InfInceptiontoFlickr {
     }
 
     // Leemos etiquetas más comunes de Inception y las distribuimos con un RDD
-    println("Leemos etiquetas más comunes de Inception: " + Calendar.getInstance.getTime.toString)
     val listaModelosEntrenados = spark.sparkContext.textFile(directorio + "mirflickr/comunes/").collect.map(entrenarModelo)
 
     // Hacemos predicciones
-    println("Hacemos predicciones: " + Calendar.getInstance.getTime.toString )
-    val predicciones = listaModelosEntrenados
-      .map(modelo => modelo._2.transform(testData).filter("prediction == 1").map(fila => EtiquetaImagen(fila.getString(0).toLong, modelo._1) ))
-      .reduce(_.union(_))
+    val prediccionesDF = listaModelosEntrenados
+      .map(modelo => modelo._2.transform(testData).filter("prediction == 1").map(fila => EtiquetaImagen(fila.getLong(0), modelo._1) ))
+      .reduce(_.union(_)).cache
 
-    predicciones.show(false)
-    predicciones.coalesce(6).write.mode(SaveMode.Overwrite).json(directorio + "mirflickr/predicciones/")
+    prediccionesDF.show(false)
+    prediccionesDF.coalesce(6).write.mode(SaveMode.Overwrite).json(directorio + "mirflickr/predicciones/")
 
+    // Estadisticas predicciones
+    val prediccionesAgrLabel = prediccionesDF.groupBy("label").agg(collect_list("id") as "images_predicted")
+    val testDataAgrLabel = testData.flatMap(f => f.getSeq[String](1).map(label => (f.getLong(0), label ))).toDF("id", "label").groupBy("label").agg(collect_list("id") as "images")
+
+    prediccionesAgrLabel.join(testDataAgrLabel, "label")
+      .map(fila => EstadisticasPrediciones(fila.getAs[String]("label"), fila.getAs[Seq[Long]]("images").size, fila.getAs[Seq[Long]]("images").filter(fila.getAs[Seq[Long]]("images_predicted") contains).size ))
+      .coalesce(3).write.json(directorio + "mirflickr/estadisticas/")
+
+    //prediccionesVsReal.coalesce(1).write.json(directorio + "mirflickr/predicciones2/")
   }
 }
