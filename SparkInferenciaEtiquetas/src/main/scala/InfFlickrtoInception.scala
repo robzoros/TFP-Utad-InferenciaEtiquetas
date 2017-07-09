@@ -3,6 +3,7 @@ import org.apache.spark.ml.classification.{DecisionTreeClassificationModel, Deci
 import org.apache.spark.ml.feature.CountVectorizer
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{SaveMode, SparkSession}
+import scala.language.postfixOps
 
 /**
   * Created by utad on 6/17/17.
@@ -91,15 +92,13 @@ object InfFlickrtoInception {
     /*************************************/
 
     // Obtenemos una lista de modelos entrenados para cada etiqueta (etiqueta, modelo)
-    //val listaModelosEntrenados = spark.sparkContext.textFile(directorio + "inception/comunes/").collect.map(entrenarModelo)
-    val listaModelosEntrenados = spark.sparkContext.textFile(directorio + "inception/comunes/").take(5).map(entrenarModelo)
-
+    val listaModelosEntrenados = spark.sparkContext.textFile(directorio + "inception/comunes/").collect.map(entrenarModelo)
+    
     // Hacemos Predicciones con el set de imágenes del trainData para cada modelo
     val prediccionesDF = listaModelosEntrenados
       .map(modelo => modelo._2.transform(testData).filter("prediction == 1").map(fila => EtiquetaImagen(fila.getLong(0), modelo._1) ))
-      .reduce(_.union(_))
+      .reduce(_.union(_)).cache
 
-    prediccionesDF.show(false)
     prediccionesDF.coalesce(6).write.mode(SaveMode.Overwrite).json(directorio + "inception/predicciones/")
 
     // Estadisticas predicciones
@@ -107,8 +106,13 @@ object InfFlickrtoInception {
     val testDataAgrLabel = testData.flatMap(f => f.getSeq[String](1).map(label => (f.getLong(0), label ))).toDF("id", "label").groupBy("label").agg(collect_list("id") as "images")
 
     prediccionesAgrLabel.join(testDataAgrLabel, "label")
-      .map(fila => EstadisticasPrediciones(fila.getAs[String]("label"), fila.getAs[Seq[Long]]("images").size, fila.getAs[Seq[Long]]("images").filter(fila.getAs[Seq[Long]]("images_predicted") contains).size ))
-      .coalesce(3).write.json(directorio + "inception/estadisticas/")
+      .map(fila => EstadisticasPredicciones(
+          fila.getAs[String]("label"), 
+          fila.getAs[Seq[Long]]("images").size,
+          fila.getAs[Seq[Long]]("images_predicted").size,
+          fila.getAs[Seq[Long]]("images").filter(fila.getAs[Seq[Long]]("images_predicted") contains).size ))
+      .as[EstadisticasPredicciones]
+      .coalesce(3).write.mode(SaveMode.Overwrite).json(directorio + "inception/estadisticas/")
   }
 
 }

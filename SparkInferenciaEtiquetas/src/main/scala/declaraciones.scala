@@ -10,7 +10,7 @@ case class EtiquetaImagen(id: Long, label: String)
 case class EtiquetaOrigenAgr(image: Long, labels: Array[String])
 case class Clasificacion(id: Long, label: Long, features: Vector)
 case class InceptionVector(image: String, labels: Array[Int], scores: Array[Double])
-case class EstadisticasPrediciones(label: String, cuenta: Long, aciertos: Long)
+case class EstadisticasPredicciones(label: String, num_images: Long, num_predicciones: Long, aciertos: Long )
 
 // Definimos funciones genéricas
 object ExtraerNombreFicheros {

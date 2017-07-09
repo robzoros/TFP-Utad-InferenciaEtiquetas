@@ -3,6 +3,7 @@ import org.apache.spark.ml.classification.{DecisionTreeClassificationModel, Deci
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{SaveMode, SparkSession}
+import scala.language.postfixOps
 
 /**
   * Created by utad on 6/17/17.
@@ -89,7 +90,7 @@ object InfInceptiontoFlickr {
       (etiqueta, modelDT)
     }
 
-    // Leemos etiquetas más comunes de Inception y las distribuimos con un RDD
+    // Obtenemos una lista de modelos entrenados para cada etiqueta (etiqueta, modelo)
     val listaModelosEntrenados = spark.sparkContext.textFile(directorio + "mirflickr/comunes/").collect.map(entrenarModelo)
 
     // Hacemos predicciones
@@ -105,9 +106,12 @@ object InfInceptiontoFlickr {
     val testDataAgrLabel = testData.flatMap(f => f.getSeq[String](1).map(label => (f.getLong(0), label ))).toDF("id", "label").groupBy("label").agg(collect_list("id") as "images")
 
     prediccionesAgrLabel.join(testDataAgrLabel, "label")
-      .map(fila => EstadisticasPrediciones(fila.getAs[String]("label"), fila.getAs[Seq[Long]]("images").size, fila.getAs[Seq[Long]]("images").filter(fila.getAs[Seq[Long]]("images_predicted") contains).size ))
-      .coalesce(3).write.json(directorio + "mirflickr/estadisticas/")
+      .map(fila => EstadisticasPredicciones(
+          fila.getAs[String]("label"), 
+          fila.getAs[Seq[Long]]("images").size,
+          fila.getAs[Seq[Long]]("images_predicted").size,
+          fila.getAs[Seq[Long]]("images").filter(fila.getAs[Seq[Long]]("images_predicted") contains).size ))
+      .coalesce(3).write.mode(SaveMode.Overwrite).json(directorio + "mirflickr/estadisticas/")
 
-    //prediccionesVsReal.coalesce(1).write.json(directorio + "mirflickr/predicciones2/")
   }
 }
