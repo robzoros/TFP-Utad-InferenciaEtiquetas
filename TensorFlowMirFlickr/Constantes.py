@@ -8,7 +8,7 @@ MODEL_URL = 'http://download.tensorflow.org/models/image/imagenet/inception-2015
 model_dir = '/home/utad/TFM/model'
 
 # Simulamos que las imagenes las obtenermos de un servicio web
-IMAGES_INDEX_URL = 'http://host.images.tfm:8000/mirflickr/'
+images_index_url = 'http://host.images.tfm:8000/mirflickr/'
 
 # Directorio de salida
 dir_classification = 'hdfs://master.spark.tfm:9000/user/utad/inception/classification'

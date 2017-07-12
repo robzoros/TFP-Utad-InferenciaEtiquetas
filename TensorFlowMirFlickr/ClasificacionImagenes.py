@@ -125,7 +125,7 @@ def serializar_inferencia(tupla):
 
 # Función auxiliar para obtener el nombre de una imagen.
 def obtener_nombre_imagen(x):
-    return C.IMAGES_INDEX_URL + x.split('<')[1].split('>')[1]
+    return C.images_index_url + x.split('<')[1].split('>')[1]
 
 
 def main(argv):
@@ -134,13 +134,17 @@ def main(argv):
         opts, args = getopt.getopt(argv, "hd:n:l:m:")
     except getopt.GetoptError:
         print ('usage: spark-submit \\ \n --master <master> \\ \n <path>/ClasificacionImagenes.py \\')
-        print (' [-d <directorio_salida] [-n <numero_imagenes>] [-l <tamaño_lote] [-m max_etiquetas]')
+        print (' [-d <directorio_salida] [-n <numero_imagenes>] \\ \n ')
+        print (' [-l <tamaño_lote] [-m max_etiquetas] [-s url_images]')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
             print ('usage: spark-submit \\ \n --master <master> \\ \n <path>/ClasificacionImagenes.py \\')
-            print (' [-d <directorio_salida] [-n <numero_imagenes>] [-l <tamaño_lote] [-m max_etiquetas]')
+            print (' [-d <directorio_salida] [-n <numero_imagenes>] \\ \n ')
+            print (' [-l <tamaño_lote] [-m max_etiquetas] [-s url_images]')
             sys.exit()
+        elif opt == "-s":
+            C.images_index_url = arg
         elif opt == "-d":
             C.dir_classification = arg
         elif opt == "-n":
@@ -160,12 +164,12 @@ def main(argv):
     # ***************************************************************************
     global node_lookup_bc
     global model_data_bc
+
     # Iniciamos SparkContext
     print("Inicio: ", datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S'))
-    sc = SparkContext(appName='TensorFlow',
+    sc = SparkContext(appName='Clasificacion MirFlickr con TensorFlow',
                       pyFiles=['/home/utad/TFM/Fuentes/TensorFlowMirFlickr/Constantes.py',
                                '/home/utad/TFM/Fuentes/TensorFlowMirFlickr/NodeLookup.py'])
-    # sc = SparkContext('local')
     get_tensorflow_model()
 
     # Cargamos el modelo y lo distribuimos
@@ -181,7 +185,7 @@ def main(argv):
     # Obtenemos una lista de las imágenes a procesar y las agrupamos en lotes
     servicio_imagenes = None
     try:
-        servicio_imagenes = urllib.urlopen(C.IMAGES_INDEX_URL)
+        servicio_imagenes = urllib.urlopen(C.images_index_url)
     except Exception as e:
         print(e)
         print("Servidor de imágenes no disponible")
@@ -195,14 +199,13 @@ def main(argv):
     inception_rdd = rdd_imagenes.flatMap(procesar_lote_imagenes)
 
     # Borramos directorio categorias del hdfs por si existiera
-    #client = Config().get_client()
-    #client.delete('inception', recursive=True)
+    client = Config().get_client()
+    client.delete('inception', recursive=True)
 
-    # Salvamos los ficheros obtenidos en formato json. Para ello hay que usar un dataframe
+    # Salvamos los ficheros obtenidos en formato json. Para ello usamos un dataframe
     print("Procesamos:", datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S'))
     spark = SparkSession(sc)
     inception_df = inception_rdd.toDF()
-    print("Salvamos:", datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S'))
     inception_df.write.json(C.dir_classification)
     print("Fin:", datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S'))
 
