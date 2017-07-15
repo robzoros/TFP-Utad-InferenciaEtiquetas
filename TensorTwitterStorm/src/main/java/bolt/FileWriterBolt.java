@@ -1,10 +1,10 @@
 package bolt;
 
-import backtype.storm.task.OutputCollector;
-import backtype.storm.task.TopologyContext;
-import backtype.storm.topology.OutputFieldsDeclarer;
-import backtype.storm.topology.base.BaseRichBolt;
-import backtype.storm.tuple.Tuple;
+import org.apache.storm.task.OutputCollector;
+import org.apache.storm.task.TopologyContext;
+import org.apache.storm.topology.OutputFieldsDeclarer;
+import org.apache.storm.topology.base.BaseRichBolt;
+import org.apache.storm.tuple.Tuple;
 
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
@@ -45,7 +45,7 @@ public class FileWriterBolt extends BaseRichBolt {
     public void execute(Tuple tuple) {
         System.out.println((count++)+":"+tuple);
         writer.println(tuple.getStringByField("classification"));
-        if ( count % 10 == 0) writer.flush();
+        if ( count % 100 == 0) writer.flush();
         // Confirm that this tuple has been treated.
         _collector.ack(tuple);
 
