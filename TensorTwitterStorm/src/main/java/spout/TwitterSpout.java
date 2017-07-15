@@ -34,10 +34,10 @@ public class TwitterSpout extends BaseRichSpout {
 
     /**
      *
-     * @param consumerKey
-     * @param consumerSecret
-     * @param accessToken
-     * @param accessTokenSecret
+     * @param consumerKey: Consumer Key de twitter
+     * @param consumerSecret: Consumer Secret de twitter
+     * @param accessToken: Access token de twitter
+     * @param accessTokenSecret: Access token Secret de twitter
      */
     public TwitterSpout(String consumerKey, String consumerSecret, String accessToken, String accessTokenSecret) {
         if (consumerKey == null ||
@@ -56,11 +56,11 @@ public class TwitterSpout extends BaseRichSpout {
 
     /**
      *  Same as first constructor, but with a filter query to filter tweets
-     * @param arg
-     * @param arg1
-     * @param arg2
-     * @param arg3
-     * @param filterQuery
+     * @param arg: Consumer Key de twitter
+     * @param arg1: Consumer Secret de twitter
+     * @param arg2: Access token de twitter
+     * @param arg3: Access token Secret de twitter
+     * @param filterQuery: Filtro para API de Twitter
      */
     public TwitterSpout(String arg, String arg1, String arg2, String arg3, FilterQuery filterQuery) {
         this(arg,arg1,arg2,arg3);

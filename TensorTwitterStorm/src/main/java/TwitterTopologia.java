@@ -1,10 +1,6 @@
 import bolt.*;
 import org.apache.storm.Config;
 import org.apache.storm.StormSubmitter;
-import org.apache.storm.hdfs.bolt.HdfsBolt;
-import org.apache.storm.hdfs.bolt.format.*;
-import org.apache.storm.hdfs.bolt.rotation.*;
-import org.apache.storm.hdfs.bolt.sync.*;
 import org.apache.storm.topology.TopologyBuilder;
 import spout.TwitterSpout;
 import twitter4j.FilterQuery;
@@ -19,7 +15,7 @@ public class TwitterTopologia {
         String consumerSecret;
         String accessToken;
         String accessTokenSecret;
-        String directorio = Constantes.directorio;
+        String path = Constantes.path;
 
         /* *************** SETUP ****************/
         consumerKey = Constantes.TweeterCredentials.consumerKey;
@@ -36,7 +32,7 @@ public class TwitterTopologia {
                 accessTokenSecret = args[3];
             }
             else if (args.length==1) {
-                directorio = args[0];
+                path = args[0];
             }
         }
         /* ***************       ****************/
@@ -51,42 +47,20 @@ public class TwitterTopologia {
         TweetExtractUrlBolt urlExtractor = new TweetExtractUrlBolt();
         GetImageBolt getImage = new GetImageBolt();
         TensorFlowBolt classifier = new TensorFlowBolt();
-        FileWriterBolt fileWriterBolt = new FileWriterBolt(directorio);
+        FileWriterBolt fileWriterBolt = new FileWriterBolt(path);
 
-        /*
-        // Creamos un bolt de HDFS usando la clase HDFSBolt de Storm
-        // use "|" instead of "," for field delimiter
-        RecordFormat format = new DelimitedRecordFormat().withFieldDelimiter("|");
-
-        // sync the filesystem after every 1k tuples
-        SyncPolicy syncPolicy = new CountSyncPolicy(1000);
-
-        // rotate files when they reach 5MB
-        FileRotationPolicy rotationPolicy = new FileSizeRotationPolicy(5.0f, FileSizeRotationPolicy.Units.MB);
-
-        FileNameFormat fileNameFormat = new DefaultFileNameFormat().withPath(Constantes.path);
-
-        HdfsBolt hdfsbolt = new HdfsBolt()
-                .withFsUrl(directorio)
-                .withFileNameFormat(fileNameFormat)
-                .withRecordFormat(format)
-                .withRotationPolicy(rotationPolicy)
-                .withSyncPolicy(syncPolicy);
-        */
 
         builder.setSpout("spoutLeerTwitter", spout,1);
         builder.setBolt("urlExtractor", urlExtractor,1).shuffleGrouping("spoutLeerTwitter");
         builder.setBolt("getImage", getImage,3).shuffleGrouping("urlExtractor");
-        builder.setBolt("classifier", classifier,3).shuffleGrouping("getImage");
-        //builder.setBolt("escribir", hdfsbolt,1).shuffleGrouping("classifier");
+        builder.setBolt("classifier", classifier,6).shuffleGrouping("getImage");
         builder.setBolt("escribir",fileWriterBolt,1).shuffleGrouping("classifier");
 
         Config conf = new Config();
         conf.setDebug(false);
-        conf.setNumWorkers(9);
+        conf.setNumWorkers(12);
 
         StormSubmitter.submitTopology(Constantes.topologia, conf, builder.createTopology());
-
 
         /*
         conf.setMaxTaskParallelism(3);

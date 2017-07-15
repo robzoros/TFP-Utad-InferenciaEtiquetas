@@ -6,9 +6,7 @@ import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Tuple;
 
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.util.Map;
 
 /**
@@ -19,8 +17,8 @@ import java.util.Map;
  * To change this template use File | Settings | File Templates.
  */
 public class FileWriterBolt extends BaseRichBolt {
-    PrintWriter writer;
-    int count = 0;
+    private PrintWriter writer;
+    private int count = 0;
     private OutputCollector _collector;
     private String filename;
 
@@ -34,8 +32,10 @@ public class FileWriterBolt extends BaseRichBolt {
     public void prepare(Map map, TopologyContext topologyContext, OutputCollector outputCollector) {
         _collector = outputCollector;
         try {
-            writer = new PrintWriter(filename, "UTF-8");
-        } catch (FileNotFoundException | UnsupportedEncodingException e) {
+            FileWriter fw = new FileWriter(filename, true);
+            BufferedWriter bw = new BufferedWriter(fw);
+            writer= new PrintWriter(bw);
+        } catch (IOException e) {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         }
 
@@ -43,7 +43,6 @@ public class FileWriterBolt extends BaseRichBolt {
 
     @Override
     public void execute(Tuple tuple) {
-        System.out.println((count++)+":"+tuple);
         writer.println(tuple.getStringByField("classification"));
         if ( count % 100 == 0) writer.flush();
         // Confirm that this tuple has been treated.

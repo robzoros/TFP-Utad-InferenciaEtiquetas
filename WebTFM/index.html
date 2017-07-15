@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>Resultados TFM</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom fonts for this template -->
+    <link href="vendor/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+    <!-- Plugin CSS -->
+    <link href="vendor/datatables/dataTables.bootstrap4.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="css/sb-admin.css" rel="stylesheet">
+
+    <!-- D3 plugins -->
+    <script type="text/javascript" src="d3/d3.min.js"></script>
+    <script type="text/javascript" src="d3/d3.layout.cloud.js"></script>
+
+
+</head>
+
+<body>
+    <div id="content">
+        <div id="inicio">
+            <h2>Proyecto fin de Programa Experto Utad</h2>
+            <h3>por Roberto Méndez</h3>
+        </div>
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-4">
+                    <a href="#tasas_url">
+                        Ir a Tasas de acierto<br/><br/>
+                        <img width="30%" src="rsc/icon-bars-graphic.svg"/>
+                    </a>
+                </div>
+                <div class="col-4">
+                    <a href="#cloud_url">
+                        Ir a Idiomas<br/><br/>
+                        <img width="30%" src="rsc/icon-word-cloud.svg"/>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+
+        <!-- Estadísticas generales -->
+        <div class="row-table">
+            <div class="card table-card card-estadistica col-md-9">
+                <div class="row top">
+                    <div class="col-sm-6">
+                        <div class="row br celda">
+                            <div class="col-sm-4">
+                                <i class="fa fa-fw fa-file-image-o estadisticas"></i>
+                            </div>
+                            <div class="col-sm-8 text-center">
+                                <h5 id="num-imagenes">Calculando...</h5>
+                                <span>Imágenes procesadas</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="row celda">
+                            <div class="col-sm-4">
+                                <i class="fa fa-fw fa-list estadisticas"></i>
+                            </div>
+                            <div class="col-sm-8 text-center">
+                                <h5 id="num-etiquetas">Calculando...</h5>
+                                <span>Etiquetas Originales</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row bottom">
+                    <div class="col-sm-6">
+                        <div class="row br celda">
+                            <div class="col-sm-4">
+                                <i class="fa fa-fw fa-flickr estadisticas"></i>
+                            </div>
+                            <div class="col-sm-8 text-center">
+                                <h5 id="etqta-flickr"></h5>
+                                <span>Etiqueta más repetida Flickr</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="row celda">
+                            <div class="col-sm-4">
+                                <i class="fa fa-fw fa-mortar-board estadisticas"></i>
+                            </div>
+                            <div class="col-sm-8 text-center">
+                                <h5 id="etqta-inception"></h5>
+                                <span>Etiqueta más repetida Inception</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Area Tasas de Acierto -->
+        <div id="tasas_url" class="card mb-3">
+            <div class="card-header">
+                <i class="fa fa-area-chart"></i> Tasas de Acierto en Etiquetas
+                <div id="origen" class="btn-group pull-right" data-toggle="buttons">
+                    <label class="labelRadio">Elige datos a visualizar: </label>
+                    <label class="btn btn-primary">
+                        <input type="radio" name="options" value = "0" id="option1" autocomplete="off" checked>Mirflickr
+                    </label>
+                    <label class="btn btn-primary">
+                        <input type="radio" name="options" value = "1" id="option2" autocomplete="off">Inception
+                    </label>
+                </div>
+            </div>
+            <div class="card-block">
+                <div id="tasas"></div>
+            </div>
+        </div>
+
+        <!-- Area Nube de Idiomas -->
+        <div id="cloud_url" class="card mb-3">
+            <div class="card-header">
+                <i class="fa fa-cloud"></i> Idiomas más usados
+            </div>
+            <div class="card-block">
+                <div id="cloud"></div>
+            </div>
+        </div>
+
+    </div>
+    <!-- /.container-fluid -->
+
+    <!-- Bootstrap core JavaScript -->
+    <script src="vendor/jquery/jquery.min.js"></script>
+    <script src="vendor/tether/tether.min.js"></script>
+    <script src="vendor/bootstrap/js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="js/idiomas.js"></script> 
+	<script type="text/javascript" src="js/script.js"></script> 
+	<script type="text/javascript" src="js/tasas.js"></script> 
+</body>
+
+</html>
