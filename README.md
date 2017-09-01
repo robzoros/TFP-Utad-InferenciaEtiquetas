@@ -89,7 +89,7 @@ Arquitectura sobre misma la infraestructura:
 - Documentación Streaming Api Twitter: <https://dev.twitter.com/streaming/overview>
 
 ### Documentación del proyecto
-Puede encontrar más información del proyecto en: <<https://goo.gl/DDuQq7>
+Puede encontrar más información del proyecto en: <https://goo.gl/DDuQq7>
 
 El código fuente del proyecto se encuentra aquí: <https://github.com/robzoros/TFP-Utad-InferenciaEtiquetas>
 
