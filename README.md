@@ -4,6 +4,15 @@
 
 **Roberto Méndez Julio 2017**
 
+## Documentación del proyecto
+Puede encontrar más información del proyecto en: <https://goo.gl/DDuQq7>
+
+El código fuente del proyecto se encuentra aquí: <https://github.com/robzoros/TFP-Utad-InferenciaEtiquetas>
+
+Puede verse una demo de la web en:  <https://zoroastro.neocities.org/> y <https://zoroastro.neocities.org/storm.html>
+
+Video en: <https://youtu.be/pPR_FIH7Lm8>
+
 ## Arquitectura
 ### Infraestructura utilizada:
 - Ordenador 16Gb memoria y 4 nucleos
@@ -87,12 +96,3 @@ Arquitectura sobre misma la infraestructura:
 ### Clasificación imágenes Twitter:
 - Storm: <http://storm.apache.org/releases/1.1.0/index.html>
 - Documentación Streaming Api Twitter: <https://dev.twitter.com/streaming/overview>
-
-### Documentación del proyecto
-Puede encontrar más información del proyecto en: <https://goo.gl/DDuQq7>
-
-El código fuente del proyecto se encuentra aquí: <https://github.com/robzoros/TFP-Utad-InferenciaEtiquetas>
-
-Puede verse una demo de la web en:  <https://zoroastro.neocities.org/> y <https://zoroastro.neocities.org/storm.html>
-
-Video en: <https://youtu.be/pPR_FIH7Lm8>
