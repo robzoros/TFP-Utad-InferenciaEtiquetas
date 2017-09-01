@@ -70,12 +70,12 @@ Arquitectura sobre misma la infraestructura:
 - Documentación apache Hadoop 2.7.3: <http://hadoop.apache.org/docs/r2.7.3/>
 
 ### Clasificación de Imágenes:
-- Mirflickr: <http://press.liacs.nl/mirflickr/
+- Mirflickr: <http://press.liacs.nl/mirflickr/>
 - TensorFlow reconocimiento de imágenes: <https://www.tensorflow.org/tutorials/image_recognition>
 - Imagenet - Etiquetas usadas para clasificar por algoritmo Inception-v3: <http://image-net.org/>
 
 ### Análisis de Datos:
-- LangId para detectar Idioma: <https://github.com/saffsd/langid.py
+- LangId para detectar Idioma: <https://github.com/saffsd/langid.py>
 - Scala Inflector para obtener singular: <https://github.com/backchatio/scala-inflector>
 
 ### Entrenamiento modelo y predicciones:
